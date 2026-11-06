@@ -156,7 +156,7 @@
                     <div>
                         <span class="text-xs font-bold tracking-widest text-emerald-400 uppercase">Dashboard Studio Duo BC</span>
                         <h2 class="text-2xl font-extrabold text-zinc-100 tracking-tight mt-1">Relatórios & Métricas</h2>
-                        <p class="text-xs text-zinc-400 mt-0.5">Sincronização em tempo real em todos os dispositivos.</p>
+                        <p class="text-xs text-zinc-400 mt-0.5">Sincronização instantânea em tempo real.</p>
                     </div>
 
                     <div class="flex items-center space-x-2 bg-zinc-900/90 border border-zinc-800 p-1.5 rounded-2xl">
@@ -222,7 +222,7 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                     <h2 class="text-xl font-bold text-zinc-100 tracking-tight">Equipe de Tatuadores</h2>
-                    <p class="text-xs text-zinc-400">Altere fotos e estilos. Alterações no celular atualizam instantaneamente no computador.</p>
+                    <p class="text-xs text-zinc-400">Altere fotos e estilos. As alterações salvam na nuvem e aparecem nos outros dispositivos.</p>
                 </div>
                 <button type="button" onclick="abrirModalTatuador()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-2">
                     <i class="fa-solid fa-plus text-emerald-400"></i>
@@ -239,7 +239,7 @@
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <div>
                         <h2 class="text-xl font-bold text-zinc-100 tracking-tight">Clientes & Galeria de Tattoos</h2>
-                        <p class="text-xs text-zinc-400">Clique em <strong>Baixar Foto</strong> em qualquer card para salvar a foto na pasta do seu computador.</p>
+                        <p class="text-xs text-zinc-400">Clique em <strong>Baixar Foto</strong> para salvar no seu computador.</p>
                     </div>
                     <button type="button" onclick="abrirModalCliente()" class="w-full sm:w-auto bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-4 py-2.5 rounded-xl text-xs font-extrabold flex items-center justify-center space-x-2">
                         <i class="fa-solid fa-user-plus"></i>
@@ -358,7 +358,7 @@
                 </div>
 
                 <div>
-                    <label class="block text-[11px] font-semibold text-zinc-400 mb-1">Foto da Tatuagem (Compactada automaticamente)</label>
+                    <label class="block text-[11px] font-semibold text-zinc-400 mb-1">Foto da Tatuagem</label>
                     <input type="file" accept="image/*" onchange="processarFotoCliente(this)" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2 text-xs text-zinc-400">
                     <input type="hidden" id="cliFotoTattoo">
                     
@@ -465,9 +465,14 @@
         </div>
     </div>
 
-    <!-- FIREBASE SDK TEMPO REAL E FALLBACK LOCAL -->
+    <!-- FIREBASE COM AUTENTICAÇÃO ANÔNIMA PRÉVIA E SYNC EM TEMPO REAL -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getAuth, 
+            signInAnonymously, 
+            onAuthStateChanged 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { 
             getFirestore, 
             collection, 
@@ -487,9 +492,9 @@
         };
 
         const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
         const db = getFirestore(app);
 
-        // Carregar dados salvos localmente caso o Firebase falhe
         window.clientes = JSON.parse(localStorage.getItem('studio_clientes') || '[]');
         window.agendamentos = JSON.parse(localStorage.getItem('studio_agendamentos') || '[]');
         window.tatuadores = JSON.parse(localStorage.getItem('studio_tatuadores') || '[]');
@@ -512,94 +517,94 @@
             }
         }
 
-        // SYNC TEMPO REAL: TATUADORES
-        onSnapshot(collection(db, "tatuadores"), (snapshot) => {
-            if (!snapshot.empty) {
-                window.tatuadores = [];
-                snapshot.forEach((doc) => {
-                    window.tatuadores.push({ id: doc.id, ...doc.data() });
-                });
-                salvarLocalmente();
-            }
-            if (window.tatuadores.length === 0) {
-                window.tatuadores = [
-                    {
-                        id: 'jhonatan',
-                        nome: 'Jhonatan',
-                        especialidade: 'Realismo / Blackwork',
-                        instagram: '@jhonatan_duobc',
-                        valor: 'R$ 250/h',
-                        foto: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80'
-                    },
-                    {
-                        id: 'navhar',
-                        nome: 'Navhar',
-                        especialidade: 'Neotraditional / Color',
-                        instagram: '@navhar_duobc',
-                        valor: 'R$ 250/h',
-                        foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
+        signInAnonymously(auth).then(() => {
+            console.log("Autenticado anonimamente com sucesso.");
+        }).catch((error) => {
+            console.error("Erro na autenticação anônima:", error);
+            atualizarBadgeSync("Modo Local", true);
+        });
+
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                onSnapshot(collection(db, "tatuadores"), (snapshot) => {
+                    if (!snapshot.empty) {
+                        window.tatuadores = [];
+                        snapshot.forEach((doc) => {
+                            window.tatuadores.push({ id: doc.id, ...doc.data() });
+                        });
+                        salvarLocalmente();
                     }
-                ];
-                salvarLocalmente();
+                    if (window.tatuadores.length === 0) {
+                        window.tatuadores = [
+                            {
+                                id: 'jhonatan',
+                                nome: 'Jhonatan',
+                                especialidade: 'Realismo / Blackwork',
+                                instagram: '@jhonatan_duobc',
+                                valor: 'R$ 250/h',
+                                foto: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80'
+                            },
+                            {
+                                id: 'navhar',
+                                nome: 'Navhar',
+                                especialidade: 'Neotraditional / Color',
+                                instagram: '@navhar_duobc',
+                                valor: 'R$ 250/h',
+                                foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
+                            }
+                        ];
+                        salvarLocalmente();
+                    }
+                    renderizarTatuadores();
+                    atualizarBadgeSync("Firebase Sync");
+                }, (error) => {
+                    console.warn("Erro ao sincronizar Tatuadores:", error.message);
+                });
+
+                onSnapshot(collection(db, "clientes"), (snapshot) => {
+                    window.clientes = [];
+                    snapshot.forEach((doc) => {
+                        window.clientes.push({ id: doc.id, ...doc.data() });
+                    });
+                    salvarLocalmente();
+                    renderizarClientes();
+                    popularSelectClientes();
+                    calcularMetricas();
+                }, (error) => {
+                    console.warn("Erro ao sincronizar Clientes:", error.message);
+                });
+
+                onSnapshot(collection(db, "agendamentos"), (snapshot) => {
+                    window.agendamentos = [];
+                    snapshot.forEach((doc) => {
+                        window.agendamentos.push({ id: doc.id, ...doc.data() });
+                    });
+                    salvarLocalmente();
+                    renderizarAgenda();
+                    calcularMetricas();
+                }, (error) => {
+                    console.warn("Erro ao sincronizar Agenda:", error.message);
+                });
             }
-            renderizarTatuadores();
-            atualizarBadgeSync("Firebase Sync");
-        }, (error) => {
-            console.warn("Firestore error (Tatuadores), usando modo local:", error.message);
-            atualizarBadgeSync("Modo Off-line / Local", true);
-            renderizarTatuadores();
         });
 
-        // SYNC TEMPO REAL: CLIENTES
-        onSnapshot(collection(db, "clientes"), (snapshot) => {
-            window.clientes = [];
-            snapshot.forEach((doc) => {
-                window.clientes.push({ id: doc.id, ...doc.data() });
-            });
-            salvarLocalmente();
-            renderizarClientes();
-            popularSelectClientes();
-            calcularMetricas();
-        }, (error) => {
-            console.warn("Firestore error (Clientes), usando modo local:", error.message);
-            atualizarBadgeSync("Modo Off-line / Local", true);
-            renderizarClientes();
-            popularSelectClientes();
-            calcularMetricas();
-        });
-
-        // SYNC TEMPO REAL: AGENDA
-        onSnapshot(collection(db, "agendamentos"), (snapshot) => {
-            window.agendamentos = [];
-            snapshot.forEach((doc) => {
-                window.agendamentos.push({ id: doc.id, ...doc.data() });
-            });
-            salvarLocalmente();
-            renderizarAgenda();
-            calcularMetricas();
-        }, (error) => {
-            console.warn("Firestore error (Agenda), usando modo local:", error.message);
-            atualizarBadgeSync("Modo Off-line / Local", true);
-            renderizarAgenda();
-            calcularMetricas();
-        });
-
-        // MÉTODOS DE ESCRITA COM PERSISTÊNCIA LOCAL FALLBACK
         window.salvarClienteFirebase = async function(obj) {
             const docId = obj.id ? String(obj.id) : String(Date.now());
             obj.id = docId;
             
-            // Salva localmente primeiro
             const idx = window.clientes.findIndex(c => String(c.id) === String(docId));
             if (idx >= 0) window.clientes[idx] = obj;
             else window.clientes.push(obj);
             salvarLocalmente();
             renderizarClientes();
+            popularSelectClientes();
+            calcularMetricas();
 
             try {
+                if (!auth.currentUser) await signInAnonymously(auth);
                 await setDoc(doc(db, "clientes", docId), obj);
             } catch (err) {
-                console.error("Erro no Firebase ao salvar cliente (salvo apenas localmente):", err);
+                console.error("Erro no Firebase ao salvar cliente:", err);
             }
         };
 
@@ -607,8 +612,11 @@
             window.clientes = window.clientes.filter(c => String(c.id) !== String(id));
             salvarLocalmente();
             renderizarClientes();
+            popularSelectClientes();
+            calcularMetricas();
 
             try {
+                if (!auth.currentUser) await signInAnonymously(auth);
                 await deleteDoc(doc(db, "clientes", String(id)));
             } catch (err) {
                 console.error("Erro no Firebase ao excluir cliente:", err);
@@ -624,11 +632,13 @@
             else window.agendamentos.push(obj);
             salvarLocalmente();
             renderizarAgenda();
+            calcularMetricas();
 
             try {
+                if (!auth.currentUser) await signInAnonymously(auth);
                 await setDoc(doc(db, "agendamentos", docId), obj);
             } catch (err) {
-                console.error("Erro no Firebase ao agendar (salvo apenas localmente):", err);
+                console.error("Erro no Firebase ao agendar:", err);
             }
         };
 
@@ -636,8 +646,10 @@
             window.agendamentos = window.agendamentos.filter(a => String(a.id) !== String(id));
             salvarLocalmente();
             renderizarAgenda();
+            calcularMetricas();
 
             try {
+                if (!auth.currentUser) await signInAnonymously(auth);
                 await deleteDoc(doc(db, "agendamentos", String(id)));
             } catch (err) {
                 console.error("Erro no Firebase ao excluir agendamento:", err);
@@ -655,16 +667,16 @@
             renderizarTatuadores();
 
             try {
+                if (!auth.currentUser) await signInAnonymously(auth);
                 await setDoc(doc(db, "tatuadores", docId), obj);
             } catch (err) {
-                console.error("Erro no Firebase ao salvar tatuador (salvo apenas localmente):", err);
+                console.error("Erro no Firebase ao salvar tatuador:", err);
             }
         };
     </script>
 
     <!-- SCRIPT DA APLICAÇÃO E DOWNLOAD DE FOTOS -->
     <script>
-        // --- COMPRESSÃO DE FOTOS VIA CANVAS (LIGHO-WEIGHT BASE64) ---
         function compactarImagem(file, maxWidth = 500, maxHeight = 500, quality = 0.65) {
             return new Promise((resolve) => {
                 const reader = new FileReader();
@@ -701,7 +713,6 @@
             });
         }
 
-        // --- FUNÇÃO PARA DOWNLOAD DA FOTO PARA O COMPUTADOR ---
         function baixarFoto(urlBase64, nomeArquivo) {
             if (!urlBase64) return;
             const a = document.createElement('a');
@@ -712,7 +723,6 @@
             document.body.removeChild(a);
         }
 
-        // --- FUNÇÃO PARA BACKUP GERAL EM JSON ---
         function baixarBackupGeral() {
             const dadosBackup = {
                 data: new Date().toISOString(),
@@ -729,7 +739,6 @@
             dlAnchorElem.click();
         }
 
-        // --- NAVEGAÇÃO ENTRE ABAS ---
         function mudarAba(abaId) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             const tabAlvo = document.getElementById('aba-' + abaId);
@@ -748,7 +757,6 @@
             if (btnMob) btnMob.className = "bottom-tab-btn flex flex-col items-center justify-center w-full py-1 text-emerald-400 font-bold";
         }
 
-        // --- AUXILIARES E MÉTRICAS ---
         function calcularSemanasPassadas(dataStr) {
             if (!dataStr) return 0;
             const dataTattoo = new Date(dataStr + 'T00:00:00');
@@ -793,7 +801,6 @@
             }
         }
 
-        // --- TATUADORES ---
         function renderizarTatuadores() {
             const container = document.getElementById('gridTatuadores');
             const selectCli = document.getElementById('cliTatuador');
@@ -899,7 +906,6 @@
             fecharModalTatuador();
         }
 
-        // --- CLIENTES ---
         function renderizarClientes() {
             const busca = (document.getElementById('buscaCliente').value || '').toLowerCase();
             const tatuadorFiltro = document.getElementById('filtroTatuadorSelect').value;
@@ -1056,7 +1062,6 @@
             renderizarClientes();
         }
 
-        // --- AGENDA ---
         function popularSelectClientes() {
             const select = document.getElementById('agendaClienteSelect');
             select.innerHTML = '';
@@ -1153,7 +1158,6 @@
             }
         }
 
-        // PWA INSTALL PROMPT
         let deferredPrompt;
         window.addEventListener('beforeinstallprompt', (e) => {
             e.preventDefault();
