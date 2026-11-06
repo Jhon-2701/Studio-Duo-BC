@@ -422,6 +422,49 @@
             <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
                 <h3 id="modalTatuadorTitulo" class="text-base font-bold text-zinc-100 flex items-center gap-2"><i class="fa-solid fa-user-ninja text-emerald-400"></i> Editar Tatuador</h3>
                 <button type="button" onclick="fecharModalTatuador()" class="text-zinc-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+
+            <form id="formTatuador" onsubmit="salvarTatuador(event)" class="space-y-3.5">
+                <input type="hidden" id="tatId">
+                <input type="hidden" id="tatFoto">
+
+                <div>
+                    <label class="block text-[11px] font-semibold text-zinc-400 mb-1">Nome do Tatuador</label>
+                    <input type="text" id="tatNome" placeholder="Ex: Jhonatan" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-100 focus:outline-none focus:border-emerald-500" required>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-zinc-400 mb-1">Especialidade</label>
+                        <input type="text" id="tatEspecialidade" placeholder="Ex: Realismo" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-100 focus:outline-none focus:border-emerald-500" required>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-zinc-400 mb-1">Valor / Hora</label>
+                        <input type="text" id="tatValor" placeholder="Ex: R$ 250/h" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-100 focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[11px] font-semibold text-zinc-400 mb-1">Instagram</label>
+                    <input type="text" id="tatInstagram" placeholder="Ex: @jhonatan_duobc" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-100 focus:outline-none focus:border-emerald-500">
+                </div>
+
+                <div class="space-y-2">
+                    <label class="block text-[11px] font-semibold text-zinc-400">Foto de Perfil</label>
+                    <div class="flex items-center space-x-3">
+                        <img id="tatFotoPreview" src="https://placehold.co/150x150/18181b/ffffff?text=Foto" class="w-16 h-16 rounded-2xl object-cover border border-zinc-700">
+                        <input type="file" accept="image/*" onchange="processarFotoTatuador(this)" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2 text-xs text-zinc-400">
+                    </div>
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-3 border-t border-zinc-800">
+                    <button type="button" onclick="fecharModalTatuador()" class="px-4 py-2.5 rounded-xl text-xs font-semibold bg-zinc-800 text-zinc-300">Cancelar</button>
+                    <button type="submit" id="btnSalvarTat" class="px-5 py-2.5 rounded-xl text-xs font-extrabold bg-emerald-500 text-zinc-950">Salvar Perfil</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- FIREBASE SDK TEMPO REAL E FALLBACK LOCAL -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
