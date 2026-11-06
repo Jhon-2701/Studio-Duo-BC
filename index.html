@@ -459,14 +459,19 @@
 
                 <div class="flex justify-end space-x-2 pt-3 border-t border-zinc-800">
                     <button type="button" onclick="fecharModalTatuador()" class="px-4 py-2.5 rounded-xl text-xs font-semibold bg-zinc-800 text-zinc-300">Cancelar</button>
+                    <button type="submit" id="btnSalvarTat" class="px-5 py-2.5 rounded-xl text-xs font-extrabold bg-emerald-500 text-zinc-950">Salvar Perfil</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- FIREBASE COM AUTENTICAÇÃO E SYNC EM TEMPO REAL -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
             getAuth, 
             signInAnonymously, 
-            signInWithCustomToken,
-            onAuthStateChanged 
+            signInWithCustomToken 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { 
             getFirestore, 
@@ -506,7 +511,7 @@
             }
         }
 
-        // Tenta autenticar de forma anônima com tratamento para projetos restritos
+        // Conexão e login anônimo robusto
         async function inicializarAutenticacao() {
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -516,14 +521,14 @@
                 }
                 atualizarBadgeSync("Nuvem Conectada");
             } catch (error) {
-                console.warn("Aviso de Auth (Tentando modo público/livre):", error);
+                console.warn("Aviso de Auth:", error);
                 atualizarBadgeSync("Nuvem Ativa");
             }
         }
 
         inicializarAutenticacao();
 
-        // Inicia ouvintes em tempo real independente do estado estrito de auth se as regras permitirem
+        // Inicia ouvintes em tempo real para sincronização entre todos os dispositivos
         const iniciarListeners = () => {
             // Sincronização de Tatuadores
             onSnapshot(collection(db, "tatuadores"), (snapshot) => {
@@ -556,6 +561,7 @@
                 renderizarTatuadores();
             }, (error) => {
                 console.warn("Erro no listener de tatuadores:", error);
+                atualizarBadgeSync("Erro Conexão", true);
             });
 
             // Sincronização de Clientes
@@ -589,27 +595,52 @@
         window.salvarClienteFirebase = async function(obj) {
             const docId = obj.id ? String(obj.id) : String(Date.now());
             obj.id = docId;
-            await setDoc(doc(db, "clientes", docId), obj);
+            try {
+                await setDoc(doc(db, "clientes", docId), obj);
+            } catch (err) {
+                console.warn("Erro ao salvar cliente na nuvem (gravando localmente):", err);
+                // Salva em localStorage de emergência caso haja bloqueio de permissão
+                const salvosLocais = JSON.parse(localStorage.getItem('studio_clientes_local') || '[]');
+                const idx = salvosLocais.findIndex(item => String(item.id) === String(docId));
+                if (idx >= 0) salvosLocais[idx] = obj; else salvosLocais.push(obj);
+                localStorage.setItem('studio_clientes_local', JSON.stringify(salvosLocais));
+            }
         };
 
         window.excluirClienteFirebase = async function(id) {
-            await deleteDoc(doc(db, "clientes", String(id)));
+            try {
+                await deleteDoc(doc(db, "clientes", String(id)));
+            } catch (err) {
+                console.warn("Erro ao excluir da nuvem:", err);
+            }
         };
 
         window.salvarAgendamentoFirebase = async function(obj) {
             const docId = obj.id ? String(obj.id) : String(Date.now());
             obj.id = docId;
-            await setDoc(doc(db, "agendamentos", docId), obj);
+            try {
+                await setDoc(doc(db, "agendamentos", docId), obj);
+            } catch (err) {
+                console.warn("Erro ao salvar agendamento na nuvem:", err);
+            }
         };
 
         window.excluirAgendamentoFirebase = async function(id) {
-            await deleteDoc(doc(db, "agendamentos", String(id)));
+            try {
+                await deleteDoc(doc(db, "agendamentos", String(id)));
+            } catch (err) {
+                console.warn("Erro ao excluir agendamento da nuvem:", err);
+            }
         };
 
         window.salvarTatuadorFirebase = async function(obj) {
             const docId = obj.id ? String(obj.id) : String(Date.now());
             obj.id = docId;
-            await setDoc(doc(db, "tatuadores", docId), obj);
+            try {
+                await setDoc(doc(db, "tatuadores", docId), obj);
+            } catch (err) {
+                console.warn("Erro ao salvar tatuador na nuvem:", err);
+            }
         };
     </script>
 
