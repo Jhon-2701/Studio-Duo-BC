@@ -422,54 +422,7 @@
             <div class="flex justify-between items-center border-b border-zinc-800 pb-3">
                 <h3 id="modalTatuadorTitulo" class="text-base font-bold text-zinc-100 flex items-center gap-2"><i class="fa-solid fa-user-ninja text-emerald-400"></i> Editar Tatuador</h3>
                 <button type="button" onclick="fecharModalTatuador()" class="text-zinc-400 hover:text-white p-1"><i class="fa-solid fa-xmark text-lg"></i></button>
-            </div>
-
-            <form id="formTatuador" onsubmit="salvarTatuador(event)" class="space-y-3.5">
-                <input type="hidden" id="tatId">
-                <input type="hidden" id="tatFoto">
-
-                <div class="flex flex-col items-center justify-center space-y-2">
-                    <div class="relative group">
-                        <img id="tatFotoPreview" src="" class="w-24 h-24 rounded-3xl object-cover border-2 border-emerald-500/50 bg-zinc-900 shadow-xl">
-                        <label for="tatFotoInput" class="absolute inset-0 bg-black/60 rounded-3xl flex flex-col items-center justify-center text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                            <i class="fa-solid fa-camera text-base mb-1"></i>
-                            <span>Alterar Foto</span>
-                        </label>
-                    </div>
-                    <input type="file" id="tatFotoInput" accept="image/*" onchange="processarFotoTatuador(this)" class="hidden">
-                    <p class="text-[10px] text-zinc-400">Clique na foto para escolher nova imagem</p>
-                </div>
-
-                <div>
-                    <label class="block text-[11px] font-semibold text-zinc-400 mb-1">Nome do Tatuador</label>
-                    <input type="text" id="tatNome" placeholder="Ex: Jhonatan" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-100" required>
-                </div>
-
-                <div>
-                    <label class="block text-[11px] font-semibold text-zinc-400 mb-1">Especialidade / Estilos</label>
-                    <input type="text" id="tatEspecialidade" placeholder="Ex: Realismo, Blackwork" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-100" required>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[11px] font-semibold text-zinc-400 mb-1">Instagram (@)</label>
-                        <input type="text" id="tatInstagram" placeholder="@jhonatan.tattoo" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-100">
-                    </div>
-                    <div>
-                        <label class="block text-[11px] font-semibold text-zinc-400 mb-1">Valor Sessão / hora</label>
-                        <input type="text" id="tatValor" placeholder="R$ 250/h" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs text-zinc-100">
-                    </div>
-                </div>
-
-                <div class="flex justify-end space-x-2 pt-3 border-t border-zinc-800">
-                    <button type="button" onclick="fecharModalTatuador()" class="px-4 py-2.5 rounded-xl text-xs font-semibold bg-zinc-800 text-zinc-300">Cancelar</button>
-                    <button type="submit" id="btnSalvarTat" class="px-5 py-2.5 rounded-xl text-xs font-extrabold bg-emerald-500 text-zinc-950">Salvar Perfil</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- FIREBASE SDK TEMPO REAL -->
+    <!-- FIREBASE SDK TEMPO REAL E FALLBACK LOCAL -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -493,9 +446,16 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        window.clientes = [];
-        window.agendamentos = [];
-        window.tatuadores = [];
+        // Carregar dados salvos localmente caso o Firebase falhe
+        window.clientes = JSON.parse(localStorage.getItem('studio_clientes') || '[]');
+        window.agendamentos = JSON.parse(localStorage.getItem('studio_agendamentos') || '[]');
+        window.tatuadores = JSON.parse(localStorage.getItem('studio_tatuadores') || '[]');
+
+        function salvarLocalmente() {
+            localStorage.setItem('studio_clientes', JSON.stringify(window.clientes));
+            localStorage.setItem('studio_agendamentos', JSON.stringify(window.agendamentos));
+            localStorage.setItem('studio_tatuadores', JSON.stringify(window.tatuadores));
+        }
 
         function atualizarBadgeSync(status, erro = false) {
             const syncElement = document.getElementById('syncStatus');
@@ -509,112 +469,152 @@
             }
         }
 
-        // SYNC TEMPO REAL: TATUADORES COM TRATAMENTO DE ERRO
+        // SYNC TEMPO REAL: TATUADORES
         onSnapshot(collection(db, "tatuadores"), (snapshot) => {
-            window.tatuadores = [];
-            snapshot.forEach((doc) => {
-                window.tatuadores.push({ id: doc.id, ...doc.data() });
-            });
+            if (!snapshot.empty) {
+                window.tatuadores = [];
+                snapshot.forEach((doc) => {
+                    window.tatuadores.push({ id: doc.id, ...doc.data() });
+                });
+                salvarLocalmente();
+            }
             if (window.tatuadores.length === 0) {
-                window.salvarTatuadorFirebase({
-                    id: 'jhonatan',
-                    nome: 'Jhonatan',
-                    especialidade: 'Realismo / Blackwork',
-                    instagram: '@jhonatan_duobc',
-                    valor: 'R$ 250/h',
-                    foto: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80'
-                });
-                window.salvarTatuadorFirebase({
-                    id: 'navhar',
-                    nome: 'Navhar',
-                    especialidade: 'Neotraditional / Color',
-                    instagram: '@navhar_duobc',
-                    valor: 'R$ 250/h',
-                    foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
-                });
+                window.tatuadores = [
+                    {
+                        id: 'jhonatan',
+                        nome: 'Jhonatan',
+                        especialidade: 'Realismo / Blackwork',
+                        instagram: '@jhonatan_duobc',
+                        valor: 'R$ 250/h',
+                        foto: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80'
+                    },
+                    {
+                        id: 'navhar',
+                        nome: 'Navhar',
+                        especialidade: 'Neotraditional / Color',
+                        instagram: '@navhar_duobc',
+                        valor: 'R$ 250/h',
+                        foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
+                    }
+                ];
+                salvarLocalmente();
             }
             renderizarTatuadores();
             atualizarBadgeSync("Firebase Sync");
         }, (error) => {
-            console.warn("Firestore error (Tatuadores):", error.message);
-            atualizarBadgeSync("Aviso: Regras Firestore", true);
+            console.warn("Firestore error (Tatuadores), usando modo local:", error.message);
+            atualizarBadgeSync("Modo Off-line / Local", true);
+            renderizarTatuadores();
         });
 
-        // SYNC TEMPO REAL: CLIENTES COM TRATAMENTO DE ERRO
+        // SYNC TEMPO REAL: CLIENTES
         onSnapshot(collection(db, "clientes"), (snapshot) => {
             window.clientes = [];
             snapshot.forEach((doc) => {
                 window.clientes.push({ id: doc.id, ...doc.data() });
             });
+            salvarLocalmente();
             renderizarClientes();
             popularSelectClientes();
             calcularMetricas();
         }, (error) => {
-            console.warn("Firestore error (Clientes):", error.message);
-            atualizarBadgeSync("Sem permissão Firebase", true);
+            console.warn("Firestore error (Clientes), usando modo local:", error.message);
+            atualizarBadgeSync("Modo Off-line / Local", true);
+            renderizarClientes();
+            popularSelectClientes();
+            calcularMetricas();
         });
 
-        // SYNC TEMPO REAL: AGENDA COM TRATAMENTO DE ERRO
+        // SYNC TEMPO REAL: AGENDA
         onSnapshot(collection(db, "agendamentos"), (snapshot) => {
             window.agendamentos = [];
             snapshot.forEach((doc) => {
                 window.agendamentos.push({ id: doc.id, ...doc.data() });
             });
+            salvarLocalmente();
             renderizarAgenda();
             calcularMetricas();
         }, (error) => {
-            console.warn("Firestore error (Agenda):", error.message);
-            atualizarBadgeSync("Sem permissão Firebase", true);
+            console.warn("Firestore error (Agenda), usando modo local:", error.message);
+            atualizarBadgeSync("Modo Off-line / Local", true);
+            renderizarAgenda();
+            calcularMetricas();
         });
 
-        // MÉTODOS DE ESCRITA NO FIREBASE COM TRY/CATCH
+        // MÉTODOS DE ESCRITA COM PERSISTÊNCIA LOCAL FALLBACK
         window.salvarClienteFirebase = async function(obj) {
+            const docId = obj.id ? String(obj.id) : String(Date.now());
+            obj.id = docId;
+            
+            // Salva localmente primeiro
+            const idx = window.clientes.findIndex(c => String(c.id) === String(docId));
+            if (idx >= 0) window.clientes[idx] = obj;
+            else window.clientes.push(obj);
+            salvarLocalmente();
+            renderizarClientes();
+
             try {
-                const docId = obj.id ? String(obj.id) : String(Date.now());
-                obj.id = docId;
                 await setDoc(doc(db, "clientes", docId), obj);
             } catch (err) {
-                console.error("Erro ao salvar cliente:", err);
-                alert("Erro de permissão no Firebase. Atualize as Regras (Rules) no Console do Firebase.");
+                console.error("Erro no Firebase ao salvar cliente (salvo apenas localmente):", err);
             }
         };
 
         window.excluirClienteFirebase = async function(id) {
+            window.clientes = window.clientes.filter(c => String(c.id) !== String(id));
+            salvarLocalmente();
+            renderizarClientes();
+
             try {
                 await deleteDoc(doc(db, "clientes", String(id)));
             } catch (err) {
-                console.error("Erro ao excluir cliente:", err);
-                alert("Erro de permissão no Firebase ao excluir cliente.");
+                console.error("Erro no Firebase ao excluir cliente:", err);
             }
         };
 
         window.salvarAgendamentoFirebase = async function(obj) {
+            const docId = obj.id ? String(obj.id) : String(Date.now());
+            obj.id = docId;
+
+            const idx = window.agendamentos.findIndex(a => String(a.id) === String(docId));
+            if (idx >= 0) window.agendamentos[idx] = obj;
+            else window.agendamentos.push(obj);
+            salvarLocalmente();
+            renderizarAgenda();
+
             try {
-                const docId = obj.id ? String(obj.id) : String(Date.now());
-                obj.id = docId;
                 await setDoc(doc(db, "agendamentos", docId), obj);
             } catch (err) {
-                console.error("Erro ao salvar agendamento:", err);
-                alert("Erro de permissão no Firebase ao agendar.");
+                console.error("Erro no Firebase ao agendar (salvo apenas localmente):", err);
             }
         };
 
         window.excluirAgendamentoFirebase = async function(id) {
+            window.agendamentos = window.agendamentos.filter(a => String(a.id) !== String(id));
+            salvarLocalmente();
+            renderizarAgenda();
+
             try {
                 await deleteDoc(doc(db, "agendamentos", String(id)));
             } catch (err) {
-                console.error("Erro ao excluir agendamento:", err);
+                console.error("Erro no Firebase ao excluir agendamento:", err);
             }
         };
 
         window.salvarTatuadorFirebase = async function(obj) {
+            const docId = obj.id ? String(obj.id) : String(Date.now());
+            obj.id = docId;
+
+            const idx = window.tatuadores.findIndex(t => String(t.id) === String(docId));
+            if (idx >= 0) window.tatuadores[idx] = obj;
+            else window.tatuadores.push(obj);
+            salvarLocalmente();
+            renderizarTatuadores();
+
             try {
-                const docId = obj.id ? String(obj.id) : String(Date.now());
-                obj.id = docId;
                 await setDoc(doc(db, "tatuadores", docId), obj);
             } catch (err) {
-                console.error("Erro ao salvar tatuador:", err);
-                alert("Erro de permissão no Firebase ao salvar tatuador.");
+                console.error("Erro no Firebase ao salvar tatuador (salvo apenas localmente):", err);
             }
         };
     </script>
