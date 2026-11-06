@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Studio Duo BC</title>
+    
+    <meta name="theme-color" content="#09090b">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .glass-card { background: rgba(18, 18, 22, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .dark-gradient { background: linear-gradient(135deg, #18181b 0%, #09090b 100%); }
+    </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 min-h-screen flex flex-col pb-10">
+
+    <!-- HEADER -->
+    <header class="glass-card sticky top-0 z-40 px-4 py-3 flex items-center justify-between border-b border-zinc-800">
+        <div class="flex items-center space-x-3">
+            <div class="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-700 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                <i class="fa-solid fa-pen-nib text-zinc-300"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-base tracking-wide text-zinc-100">Studio Duo BC</h1>
+                <p class="text-[10px] text-zinc-400">Jhonatan & Navhar <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 ml-1 animate-pulse"></span></p>
+            </div>
+        </div>
+        <button type="button" onclick="abrirModalAgendamento()" class="bg-zinc-100 hover:bg-white text-zinc-950 px-3 py-2 rounded-xl text-xs font-bold flex items-center space-x-1.5 shadow-lg">
+            <i class="fa-solid fa-calendar-plus"></i>
+            <span>Agendar</span>
+        </button>
+    </header>
+
+    <!-- CONTEÚDO PRINCIPAL -->
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 space-y-5">
+
+        <!-- PAINEL DE MÉTRICAS & ATENDIMENTOS POR TATUADOR -->
+        <div class="glass-card p-4 rounded-2xl space-y-3">
+            <div class="flex items-center justify-between">
+                <h3 class="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center space-x-2">
+                    <i class="fa-solid fa-chart-pie text-zinc-300"></i>
+                    <span>Relatório de Atendimentos</span>
+                </h3>
+                <input type="month" id="filtroMesRelatorio" onchange="calcularMetricas()" class="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-1 text-xs focus:outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-1">
+                <div onclick="filtrarClientesPorTatuador('Jhonatan')" class="bg-zinc-900/80 p-3 rounded-xl border border-zinc-800 cursor-pointer hover:border-zinc-700 transition-all">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-zinc-300">Jhonatan</span>
+                        <i class="fa-solid fa-user-ninja text-xs text-zinc-500"></i>
+                    </div>
+                    <h4 id="countJhonatan" class="text-xl font-bold mt-1 text-zinc-100">0</h4>
+                    <p class="text-[9px] text-zinc-500">atendimentos no mês</p>
+                </div>
+
+                <div onclick="filtrarClientesPorTatuador('Navhar')" class="bg-zinc-900/80 p-3 rounded-xl border border-zinc-800 cursor-pointer hover:border-zinc-700 transition-all">
+                    <div class="flex items-center justify-between">
+                        <span class="text-xs font-semibold text-zinc-300">Navhar</span>
+                        <i class="fa-solid fa-user-ninja text-xs text-zinc-500"></i>
+                    </div>
+                    <h4 id="countNavhar" class="text-xl font-bold mt-1 text-zinc-100">0</h4>
+                    <p class="text-[9px] text-zinc-500">atendimentos no mês</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- ABAS DE NAVEGAÇÃO -->
+        <div class="flex space-x-2 border-b border-zinc-800 pb-2">
+            <button type="button" onclick="mudarAba('clientes')" id="btn-clientes" class="px-4 py-2.5 rounded-xl text-xs font-semibold bg-zinc-100 text-zinc-950">Clientes</button>
+            <button type="button" onclick="mudarAba('agenda')" id="btn-agenda" class="px-4 py-2.5 rounded-xl text-xs font-semibold bg-zinc-900 text-zinc-400 flex items-center space-x-1.5">
+                <span>Agenda</span>
+                <span id="badgeHoje" class="hidden bg-emerald-500 text-zinc-950 text-[9px] font-bold px-1.5 py-0.5 rounded-full">HOJE</span>
+            </button>
+        </div>
+
+        <!-- ABA CLIENTES -->
+        <div id="aba-clientes" class="space-y-4">
+            <div class="flex flex-col gap-3">
+                <div class="relative w-full">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-zinc-500 text-xs"></i>
+                    <input type="text" id="buscaCliente" oninput="renderizarClientes()" placeholder="Buscar cliente, telefone ou tatuador..." class="w-full bg-zinc-900 border border-zinc-800 rounded-xl pl-9 pr-4 py-2.5 text-xs focus:outline-none focus:border-zinc-700">
+                </div>
+                
+                <div class="flex space-x-2">
+                    <select id="filtroTatuadorSelect" onchange="renderizarClientes()" class="w-1/2 bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-2.5 text-xs focus:outline-none">
+                        <option value="todos">Todos Tatuadores</option>
+                        <option value="Jhonatan">Jhonatan</option>
+                        <option value="Navhar">Navhar</option>
+                    </select>
+
+                    <button type="button" onclick="abrirModalCliente()" class="w-1/2 bg-zinc-900 active:bg-zinc-800 text-zinc-100 border border-zinc-700 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5">
+                        <i class="fa-solid fa-user-plus text-xs"></i>
+                        <span>Novo Cliente</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- LISTA DE CARDS DE CLIENTES -->
+            <div id="listaClientes" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="text-center p-6 text-zinc-500 text-xs col-span-full">A carregar clientes...</div>
+            </div>
+        </div>
+
+        <!-- ABA AGENDA -->
+        <div id="aba-agenda" class="hidden space-y-4">
+            <div class="glass-card rounded-2xl p-4 space-y-3">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-xs uppercase tracking-wider text-zinc-300">Próximos Agendamentos</h3>
+                    <select id="filtroAgendaTatuador" onchange="renderizarAgenda()" class="bg-zinc-900 border border-zinc-800 rounded-xl px-3 py-1.5 text-xs">
+                        <option value="todos">Ver Todos</option>
+                        <option value="Jhonatan">Apenas Jhonatan</option>
+                        <option value="Navhar">Apenas Navhar</option>
+                    </select>
+                </div>
+
+                <div id="listaAgenda" class="space-y-2">
+                    <!-- Populado via JS -->
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- MODAL CADASTRO / EDIÇÃO CLIENTE -->
+    <div id="modalCliente" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-card w-full max-w-md p-5 rounded-3xl space-y-4 max-h-[90vh] overflow-y-auto border-zinc-700">
+            <div class="flex justify-between items-center">
+                <h3 id="modalClienteTitulo" class="text-sm font-bold">Cadastrar Cliente</h3>
+                <button type="button" onclick="fecharModalCliente()" class="text-zinc-400 p-2"><i class="fa-solid fa-xmark text-base"></i></button>
+            </div>
+
+            <form id="formCliente" onsubmit="salvarCliente(event)" class="space-y-3">
+                <input type="hidden" id="cliId">
+                
+                <div>
+                    <label class="block text-[10px] text-zinc-400 mb-1">Nome do Cliente</label>
+                    <input type="text" id="cliNome" placeholder="Ex: Carlos Silva" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs" required>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] text-zinc-400 mb-1">Telefone (WhatsApp)</label>
+                        <input type="tel" id="cliTelefone" placeholder="(68) 99999-9999" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs" required>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-zinc-400 mb-1">Tatuador Responsável</label>
+                        <select id="cliTatuador" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs" required>
+                            <option value="Jhonatan">Jhonatan</option>
+                            <option value="Navhar">Navhar</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] text-zinc-400 mb-1">Data da Última Tattoo</label>
+                        <input type="date" id="cliDataTattoo" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs" required>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-zinc-400 mb-1">Estilo / Descrição</label>
+                        <input type="text" id="cliEstilo" placeholder="Ex: Blackwork Leão" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs">
+                    </div>
+                </div>
+
+                <!-- BÓNUS E PROMOÇÕES -->
+                <div class="bg-zinc-900/60 p-3 rounded-2xl border border-zinc-800 space-y-2">
+                    <span class="text-[11px] font-bold text-zinc-300 block">Bónus de Promoção</span>
+                    <div class="grid grid-cols-2 gap-2">
+                        <div>
+                            <label class="block text-[9px] text-zinc-400 mb-0.5">Descrição do Bónus</label>
+                            <input type="text" id="cliBonusDesc" placeholder="Ex: 15% Desconto na próxima" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs">
+                        </div>
+                        <div>
+                            <label class="block text-[9px] text-zinc-400 mb-0.5">Validade do Bónus</label>
+                            <input type="date" id="cliBonusValidade" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg p-2 text-xs">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-[10px] text-zinc-400 mb-1">Foto da Tatuagem</label>
+                    <input type="file" accept="image/*" onchange="converterImagemTattoo(this)" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2 text-[10px] text-zinc-400">
+                    <input type="hidden" id="cliFotoTattoo">
+                </div>
+
+                <div class="flex justify-end space-x-2 pt-2">
+                    <button type="button" onclick="fecharModalCliente()" class="px-4 py-2 rounded-xl text-xs bg-zinc-800 text-zinc-300">Cancelar</button>
+                    <button type="submit" id="btnSalvarCli" class="px-5 py-2 rounded-xl text-xs font-bold bg-zinc-100 text-zinc-950 shadow-lg">Salvar Cliente</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL AGENDAMENTO -->
+    <div id="modalAgendamento" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="glass-card w-full max-w-sm p-5 rounded-3xl space-y-4 border-zinc-700">
+            <div class="flex justify-between items-center">
+                <h3 class="text-sm font-bold flex items-center space-x-2">
+                    <i class="fa-solid fa-calendar-day text-zinc-300"></i>
+                    <span>Novo Agendamento</span>
+                </h3>
+                <button type="button" onclick="fecharModalAgendamento()" class="text-zinc-400 p-2"><i class="fa-solid fa-xmark text-base"></i></button>
+            </div>
+
+            <form id="formAgendamento" onsubmit="salvarAgendamento(event)" class="space-y-3">
+                <div>
+                    <label class="block text-[10px] text-zinc-400 mb-1">Selecionar Cliente</label>
+                    <select id="agendaClienteSelect" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs" required></select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[10px] text-zinc-400 mb-1">Data</label>
+                        <input type="date" id="agendaData" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs" required>
+                    </div>
+                    <div>
+                        <label class="block text-[10px] text-zinc-400 mb-1">Horário</label>
+                        <input type="time" id="agendaHora" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-zinc-400 mb-1">Tatuador</label>
+                    <select id="agendaTatuador" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs" required>
+                        <option value="Jhonatan">Jhonatan</option>
+                        <option value="Navhar">Navhar</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] text-zinc-400 mb-1">Observações / Projeto</label>
+                    <input type="text" id="agendaObs" placeholder="Ex: Sessão de retoque no braço" class="w-full bg-zinc-900 border border-zinc-800 rounded-xl p-2.5 text-xs">
+                </div>
+
+                <button type="submit" id="btnSalvarAgenda" class="w-full bg-zinc-100 hover:bg-white text-zinc-950 font-bold py-3 rounded-xl text-xs shadow-lg">Confirmar Agendamento</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- FIREBASE SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+        import { 
+            getFirestore, 
+            collection, 
+            doc, 
+            setDoc, 
+            deleteDoc, 
+            onSnapshot,
+            query,
+            orderBy 
+        } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+        // Cole aqui as credenciais do Firebase Firestore do seu projeto Studio Duo BC
+        const firebaseConfig = {
+            apiKey: "AIzaSyDXMxC6ql9jjbFlTb76vF__47ZPGjfcNYQ",
+            authDomain: "studioduobc.firebaseapp.com",
+            projectId: "studioduobc",
+            storageBucket: "studioduobc.firebasestorage.app",
+            messagingSenderId: "518113500152",
+            appId: "1:518113500152:web:8c0847f8800092833a940d"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        window.clientes = [];
+        window.agendamentos = [];
+
+        // Realtime Sync Clientes
+        onSnapshot(collection(db, "clientes"), (snapshot) => {
+            window.clientes = [];
+            snapshot.forEach((doc) => {
+                window.clientes.push({ id: doc.id, ...doc.data() });
+            });
+            renderizarClientes();
+            popularSelectClientes();
+            calcularMetricas();
+        });
+
+        // Realtime Sync Agenda
+        onSnapshot(query(collection(db, "agendamentos"), orderBy("data", "asc")), (snapshot) => {
+            window.agendamentos = [];
+            snapshot.forEach((doc) => {
+                window.agendamentos.push({ id: doc.id, ...doc.data() });
+            });
+            renderizarAgenda();
+            verificarNotificacoesHoje();
+        });
+
+        window.salvarClienteFirebase = async function(obj) {
+            const docId = obj.id ? String(obj.id) : String(Date.now());
+            obj.id = docId;
+            await setDoc(doc(db, "clientes", docId), obj);
+        };
+
+        window.excluirClienteFirebase = async function(id) {
+            await deleteDoc(doc(db, "clientes", String(id)));
+        };
+
+        window.salvarAgendamentoFirebase = async function(obj) {
+            const docId = obj.id ? String(obj.id) : String(Date.now());
+            obj.id = docId;
+            await setDoc(doc(db, "agendamentos", docId), obj);
+        };
+
+        window.excluirAgendamentoFirebase = async function(id) {
+            await deleteDoc(doc(db, "agendamentos", String(id)));
+        };
+    </script>
+
+    <script>
+        document.getElementById('filtroMesRelatorio').value = new Date().toISOString().slice(0, 7);
+
+        function mudarAba(aba) {
+            document.getElementById('aba-clientes').classList.add('hidden');
+            document.getElementById('aba-agenda').classList.add('hidden');
+            document.getElementById('btn-clientes').className = "px-4 py-2.5 rounded-xl text-xs font-semibold bg-zinc-900 text-zinc-400";
+            document.getElementById('btn-agenda').className = "px-4 py-2.5 rounded-xl text-xs font-semibold bg-zinc-900 text-zinc-400";
+
+            document.getElementById('aba-' + aba).classList.remove('hidden');
+            document.getElementById('btn-' + aba).className = "px-4 py-2.5 rounded-xl text-xs font-semibold bg-zinc-100 text-zinc-950";
+        }
+
+        function calcularSemanasPassadas(dataStr) {
+            if(!dataStr) return 0;
+            const dataTattoo = new Date(dataStr);
+            const hoje = new Date();
+            const diffTempo = Math.abs(hoje - dataTattoo);
+            const diffDias = Math.floor(diffTempo / (1000 * 60 * 60 * 24));
+            return Math.floor(diffDias / 7);
+        }
+
+        function renderizarClientes() {
+            const busca = (document.getElementById('buscaCliente').value || '').toLowerCase();
+            const tatuadorFiltro = document.getElementById('filtroTatuadorSelect').value;
+            const container = document.getElementById('listaClientes');
+            container.innerHTML = '';
+
+            let lista = (window.clientes || []).filter(c => 
+                (c.nome.toLowerCase().includes(busca) || c.telefone.includes(busca) || c.tatuador.toLowerCase().includes(busca)) &&
+                (tatuadorFiltro === 'todos' || c.tatuador === tatuadorFiltro)
+            );
+
+            if(lista.length === 0) {
+                container.innerHTML = `<div class="text-center p-6 text-zinc-500 text-xs col-span-full">Nenhum cliente cadastrado.</div>`;
+                return;
+            }
+
+            lista.forEach(c => {
+                const semanas = calcularSemanasPassadas(c.dataTattoo);
+                const fazUmMesOuMais = semanas >= 4;
+
+                // Validação de Bónus
+                let bonusHtml = '';
+                if(c.bonusDesc && c.bonusValidade) {
+                    const hojeStr = new Date().toISOString().split('T')[0];
+                    if(c.bonusValidade >= hojeStr) {
+                        bonusHtml = `
+                            <div class="mt-2 text-[10px] bg-amber-500/10 border border-amber-500/30 text-amber-300 p-2 rounded-xl flex items-center justify-between">
+                                <span><i class="fa-solid fa-gift mr-1"></i> ${c.bonusDesc}</span>
+                                <span class="text-[9px] opacity-75">Válido até ${formatarData(c.bonusValidade)}</span>
+                            </div>
+                        `;
+                    }
+                }
+
+                let imgHtml = c.fotoTattoo ? 
+                    `<img src="${c.fotoTattoo}" class="w-full h-44 object-cover rounded-xl border border-zinc-800 mb-3">` :
+                    `<div class="w-full h-32 bg-zinc-900 rounded-xl border border-zinc-800 mb-3 flex flex-col items-center justify-center text-zinc-600 text-xs">
+                        <i class="fa-solid fa-camera text-xl mb-1"></i>
+                        <span>Sem foto registrada</span>
+                    </div>`;
+
+                container.innerHTML += `
+                    <div class="glass-card p-4 rounded-2xl flex flex-col justify-between border-zinc-800 hover:border-zinc-700 transition-all">
+                        <div>
+                            ${imgHtml}
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <h4 class="font-bold text-sm text-zinc-100">${c.nome}</h4>
+                                    <p class="text-[10px] text-zinc-400">Tatuador: <span class="text-zinc-200 font-semibold">${c.tatuador}</span></p>
+                                </div>
+                                <span class="text-[10px] bg-zinc-800 text-zinc-300 px-2 py-1 rounded-lg border border-zinc-700 font-semibold">${semanas} ${semanas === 1 ? 'semana' : 'semanas'}</span>
+                            </div>
+
+                            ${c.estilo ? `<p class="text-[11px] text-zinc-300 mt-2"><i class="fa-solid fa-paint-brush text-[10px] text-zinc-500 mr-1"></i> ${c.estilo}</p>` : ''}
+
+                            ${fazUmMesOuMais ? `
+                                <div class="mt-2 text-[10px] bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 p-2 rounded-xl flex items-center space-x-1.5">
+                                    <i class="fa-solid fa-bell animate-bounce"></i>
+                                    <span>Faz <strong>1 mês+</strong> da última tattoo! (Retorno/Novo projeto)</span>
+                                </div>
+                            ` : ''}
+
+                            ${bonusHtml}
+                        </div>
+
+                        <div class="flex items-center justify-between pt-4 mt-2 border-t border-zinc-800/80">
+                            <a href="https://wa.me/55${c.telefone.replace(/\D/g,'')}" target="_blank" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-xl font-medium flex items-center space-x-1">
+                                <i class="fa-brands fa-whatsapp"></i>
+                                <span>Contato</span>
+                            </a>
+                            <div class="space-x-1">
+                                <button type="button" onclick="editarCliente('${c.id}')" class="text-zinc-400 hover:text-white p-1.5"><i class="fa-solid fa-pen"></i></button>
+                                <button type="button" onclick="excluirCliente('${c.id}')" class="text-zinc-400 hover:text-rose-400 p-1.5"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function converterImagemTattoo(input) {
+            if (input.files && input.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('cliFotoTattoo').value = e.target.result;
+                }
+                reader.readAsDataURL(input.files[0]);
+            }
+        }
+
+        function abrirModalCliente(id = null) {
+            document.getElementById('modalCliente').classList.remove('hidden');
+            if(id) {
+                document.getElementById('modalClienteTitulo').innerText = "Editar Cliente";
+                const c = window.clientes.find(item => String(item.id) === String(id));
+                document.getElementById('cliId').value = c.id;
+                document.getElementById('cliNome').value = c.nome;
+                document.getElementById('cliTelefone').value = c.telefone;
+                document.getElementById('cliTatuador').value = c.tatuador;
+                document.getElementById('cliDataTattoo').value = c.dataTattoo;
+                document.getElementById('cliEstilo').value = c.estilo || '';
+                document.getElementById('cliBonusDesc').value = c.bonusDesc || '';
+                document.getElementById('cliBonusValidade').value = c.bonusValidade || '';
+                document.getElementById('cliFotoTattoo').value = c.fotoTattoo || '';
+            } else {
+                document.getElementById('modalClienteTitulo').innerText = "Cadastrar Cliente";
+                document.getElementById('formCliente').reset();
+                document.getElementById('cliId').value = '';
+                document.getElementById('cliFotoTattoo').value = '';
+                document.getElementById('cliDataTattoo').value = new Date().toISOString().split('T')[0];
+            }
+        }
+
+        function fecharModalCliente() { document.getElementById('modalCliente').classList.add('hidden'); }
+
+        async function salvarCliente(e) {
+            e.preventDefault();
+            const btn = document.getElementById('btnSalvarCli');
+            btn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> <span>Salvando...</span>`;
+            btn.disabled = true;
+
+            const id = document.getElementById('cliId').value;
+            const obj = {
+                id: id || null,
+                nome: document.getElementById('cliNome').value,
+                telefone: document.getElementById('cliTelefone').value,
+                tatuador: document.getElementById('cliTatuador').value,
+                dataTattoo: document.getElementById('cliDataTattoo').value,
+                estilo: document.getElementById('cliEstilo').value,
+                bonusDesc: document.getElementById('cliBonusDesc').value,
+                bonusValidade: document.getElementById('cliBonusValidade').value,
+                fotoTattoo: document.getElementById('cliFotoTattoo').value
+            };
+
+            await window.salvarClienteFirebase(obj);
+            btn.innerHTML = `<span>Salvar Cliente</span>`;
+            btn.disabled = false;
+            fecharModalCliente();
+        }
+
+        function editarCliente(id) { abrirModalCliente(id); }
+
+        async function excluirCliente(id) {
+            if(confirm('Deseja excluir este cliente?')) {
+                await window.excluirClienteFirebase(id);
+            }
+        }
+
+        // --- AGENDA & NOTIFICAÇÕES ---
+        function popularSelectClientes() {
+            const select = document.getElementById('agendaClienteSelect');
+            select.innerHTML = '';
+            (window.clientes || []).forEach(c => {
+                select.innerHTML += `<option value="${c.id}">${c.nome} (${c.tatuador})</option>`;
+            });
+        }
+
+        function abrirModalAgendamento() {
+            popularSelectClientes();
+            document.getElementById('modalAgendamento').classList.remove('hidden');
+            document.getElementById('agendaData').value = new Date().toISOString().split('T')[0];
+        }
+
+        function fecharModalAgendamento() { document.getElementById('modalAgendamento').classList.add('hidden'); }
+
+        async function salvarAgendamento(e) {
+            e.preventDefault();
+            const cliId = document.getElementById('agendaClienteSelect').value;
+            const cliente = window.clientes.find(c => String(c.id) === String(cliId));
+
+            const obj = {
+                clienteId: cliId,
+                clienteNome: cliente ? cliente.nome : 'Cliente',
+                data: document.getElementById('agendaData').value,
+                hora: document.getElementById('agendaHora').value,
+                tatuador: document.getElementById('agendaTatuador').value,
+                obs: document.getElementById('agendaObs').value
+            };
+
+            await window.salvarAgendamentoFirebase(obj);
+            fecharModalAgendamento();
+            mudarAba('agenda');
+        }
+
+        function renderizarAgenda() {
+            const filtro = document.getElementById('filtroAgendaTatuador').value;
+            const container = document.getElementById('listaAgenda');
+            const hojeStr = new Date().toISOString().split('T')[0];
+            container.innerHTML = '';
+
+            let lista = (window.agendamentos || []).filter(a => filtro === 'todos' || a.tatuador === filtro);
+
+            if(lista.length === 0) {
+                container.innerHTML = `<p class="text-center text-xs text-zinc-500 py-4">Nenhum agendamento marcado.</p>`;
+                return;
+            }
+
+            lista.forEach(a => {
+                const ehHoje = a.data === hojeStr;
+
+                container.innerHTML += `
+                    <div class="p-3 rounded-xl ${ehHoje ? 'bg-emerald-950/40 border border-emerald-500/50' : 'bg-zinc-900 border border-zinc-800'} flex items-center justify-between">
+                        <div>
+                            <div class="flex items-center space-x-2">
+                                <span class="font-bold text-xs text-zinc-100">${a.clienteNome}</span>
+                                ${ehHoje ? `<span class="bg-emerald-500 text-zinc-950 text-[9px] font-bold px-1.5 py-0.5 rounded-full">HOJE</span>` : ''}
+                            </div>
+                            <p class="text-[10px] text-zinc-400 mt-0.5">
+                                <i class="fa-regular fa-clock mr-1"></i> ${formatarData(a.data)} às ${a.hora} | Tatuador: <strong>${a.tatuador}</strong>
+                            </p>
+                            ${a.obs ? `<p class="text-[10px] text-zinc-300 italic mt-1">${a.obs}</p>` : ''}
+                        </div>
+                        <button type="button" onclick="excluirAgendamento('${a.id}')" class="text-zinc-500 hover:text-rose-400 p-2"><i class="fa-solid fa-check"></i></button>
+                    </div>
+                `;
+            });
+        }
+
+        async function excluirAgendamento(id) {
+            if(confirm('Concluir ou remover agendamento?')) {
+                await window.excluirAgendamentoFirebase(id);
+            }
+        }
+
+        function verificarNotificacoesHoje() {
+            const hojeStr = new Date().toISOString().split('T')[0];
+            const temHoje = (window.agendamentos || []).some(a => a.data === hojeStr);
+            const badge = document.getElementById('badgeHoje');
+            if(temHoje) {
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function calcularMetricas() {
+            const mesAno = document.getElementById('filtroMesRelatorio').value; // YYYY-MM
+            let countJ = 0;
+            let countN = 0;
+
+            (window.clientes || []).forEach(c => {
+                if(c.dataTattoo && c.dataTattoo.startsWith(mesAno)) {
+                    if(c.tatuador === 'Jhonatan') countJ++;
+                    if(c.tatuador === 'Navhar') countN++;
+                }
+            });
+
+            document.getElementById('countJhonatan').innerText = countJ;
+            document.getElementById('countNavhar').innerText = countN;
+        }
+
+        function filtrarClientesPorTatuador(tatuador) {
+            document.getElementById('filtroTatuadorSelect').value = tatuador;
+            mudarAba('clientes');
+            renderizarClientes();
+        }
+
+        function formatarData(dataIso) {
+            if(!dataIso) return '';
+            const partes = dataIso.split('-');
+            return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        }
+    </script>
+</body>
+</html>
