@@ -97,8 +97,8 @@
                 <div>
                     <div class="flex items-center space-x-2">
                         <h1 class="font-extrabold text-base tracking-tight text-zinc-100">Studio Duo BC</h1>
-                        <span id="syncStatus" class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse"></span> Firebase Sync
+                        <span id="syncStatus" class="inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse"></span> Nuvem Conectada
                         </span>
                     </div>
                     <p class="text-[11px] text-zinc-400 flex items-center gap-1.5 font-medium">
@@ -156,7 +156,7 @@
                     <div>
                         <span class="text-xs font-bold tracking-widest text-emerald-400 uppercase">Dashboard Studio Duo BC</span>
                         <h2 class="text-2xl font-extrabold text-zinc-100 tracking-tight mt-1">Relatórios & Métricas</h2>
-                        <p class="text-xs text-zinc-400 mt-0.5">Sincronização instantânea em tempo real.</p>
+                        <p class="text-xs text-zinc-400 mt-0.5">Sincronização em nuvem ativa para todos os aparelhos.</p>
                     </div>
 
                     <div class="flex items-center space-x-2 bg-zinc-900/90 border border-zinc-800 p-1.5 rounded-2xl">
@@ -222,7 +222,7 @@
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
                     <h2 class="text-xl font-bold text-zinc-100 tracking-tight">Equipe de Tatuadores</h2>
-                    <p class="text-xs text-zinc-400">Altere fotos e estilos. As alterações salvam na nuvem e aparecem nos outros dispositivos.</p>
+                    <p class="text-xs text-zinc-400">Altere fotos e estilos. As alterações salvam na nuvem e atualizam instantaneamente em todos os celulares.</p>
                 </div>
                 <button type="button" onclick="abrirModalTatuador()" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-100 border border-zinc-700 px-4 py-2 rounded-xl text-xs font-bold flex items-center justify-center space-x-2">
                     <i class="fa-solid fa-plus text-emerald-400"></i>
@@ -465,7 +465,7 @@
         </div>
     </div>
 
-    <!-- FIREBASE COM AUTENTICAÇÃO ANÔNIMA PRÉVIA E SYNC EM TEMPO REAL -->
+    <!-- FIREBASE COM AUTENTICAÇÃO ANÔNIMA E SYNC EM TEMPO REAL IMEDIATO -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -495,15 +495,9 @@
         const auth = getAuth(app);
         const db = getFirestore(app);
 
-        window.clientes = JSON.parse(localStorage.getItem('studio_clientes') || '[]');
-        window.agendamentos = JSON.parse(localStorage.getItem('studio_agendamentos') || '[]');
-        window.tatuadores = JSON.parse(localStorage.getItem('studio_tatuadores') || '[]');
-
-        function salvarLocalmente() {
-            localStorage.setItem('studio_clientes', JSON.stringify(window.clientes));
-            localStorage.setItem('studio_agendamentos', JSON.stringify(window.agendamentos));
-            localStorage.setItem('studio_tatuadores', JSON.stringify(window.tatuadores));
-        }
+        window.clientes = [];
+        window.agendamentos = [];
+        window.tatuadores = [];
 
         function atualizarBadgeSync(status, erro = false) {
             const syncElement = document.getElementById('syncStatus');
@@ -512,30 +506,31 @@
                 syncElement.className = "inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30";
                 syncElement.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-amber-400 mr-1 animate-ping"></span> ${status}`;
             } else {
-                syncElement.className = "inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20";
+                syncElement.className = "inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/25";
                 syncElement.innerHTML = `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse"></span> ${status}`;
             }
         }
 
-        signInAnonymously(auth).then(() => {
-            console.log("Autenticado anonimamente com sucesso.");
-        }).catch((error) => {
+        // Executa autenticação anônima imediata
+        signInAnonymously(auth).catch((error) => {
             console.error("Erro na autenticação anônima:", error);
-            atualizarBadgeSync("Modo Local", true);
+            atualizarBadgeSync("Offline", true);
         });
 
         onAuthStateChanged(auth, (user) => {
             if (user) {
+                atualizarBadgeSync("Nuvem Conectada");
+
+                // Sincronização em Tempo Real de Tatuadores
                 onSnapshot(collection(db, "tatuadores"), (snapshot) => {
-                    if (!snapshot.empty) {
-                        window.tatuadores = [];
-                        snapshot.forEach((doc) => {
-                            window.tatuadores.push({ id: doc.id, ...doc.data() });
-                        });
-                        salvarLocalmente();
-                    }
+                    window.tatuadores = [];
+                    snapshot.forEach((doc) => {
+                        window.tatuadores.push({ id: doc.id, ...doc.data() });
+                    });
+
+                    // Se estiver vazio no banco pela primeira vez, insere os padrões
                     if (window.tatuadores.length === 0) {
-                        window.tatuadores = [
+                        const iniciais = [
                             {
                                 id: 'jhonatan',
                                 nome: 'Jhonatan',
@@ -553,37 +548,36 @@
                                 foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
                             }
                         ];
-                        salvarLocalmente();
+                        iniciais.forEach(t => setDoc(doc(db, "tatuadores", t.id), t));
                     }
                     renderizarTatuadores();
-                    atualizarBadgeSync("Firebase Sync");
                 }, (error) => {
-                    console.warn("Erro ao sincronizar Tatuadores:", error.message);
+                    console.error("Erro no listener de tatuadores:", error);
                 });
 
+                // Sincronização em Tempo Real de Clientes
                 onSnapshot(collection(db, "clientes"), (snapshot) => {
                     window.clientes = [];
                     snapshot.forEach((doc) => {
                         window.clientes.push({ id: doc.id, ...doc.data() });
                     });
-                    salvarLocalmente();
                     renderizarClientes();
                     popularSelectClientes();
                     calcularMetricas();
                 }, (error) => {
-                    console.warn("Erro ao sincronizar Clientes:", error.message);
+                    console.error("Erro no listener de clientes:", error);
                 });
 
+                // Sincronização em Tempo Real de Agendamentos
                 onSnapshot(collection(db, "agendamentos"), (snapshot) => {
                     window.agendamentos = [];
                     snapshot.forEach((doc) => {
                         window.agendamentos.push({ id: doc.id, ...doc.data() });
                     });
-                    salvarLocalmente();
                     renderizarAgenda();
                     calcularMetricas();
                 }, (error) => {
-                    console.warn("Erro ao sincronizar Agenda:", error.message);
+                    console.error("Erro no listener de agendamentos:", error);
                 });
             }
         });
@@ -591,87 +585,27 @@
         window.salvarClienteFirebase = async function(obj) {
             const docId = obj.id ? String(obj.id) : String(Date.now());
             obj.id = docId;
-            
-            const idx = window.clientes.findIndex(c => String(c.id) === String(docId));
-            if (idx >= 0) window.clientes[idx] = obj;
-            else window.clientes.push(obj);
-            salvarLocalmente();
-            renderizarClientes();
-            popularSelectClientes();
-            calcularMetricas();
-
-            try {
-                if (!auth.currentUser) await signInAnonymously(auth);
-                await setDoc(doc(db, "clientes", docId), obj);
-            } catch (err) {
-                console.error("Erro no Firebase ao salvar cliente:", err);
-            }
+            await setDoc(doc(db, "clientes", docId), obj);
         };
 
         window.excluirClienteFirebase = async function(id) {
-            window.clientes = window.clientes.filter(c => String(c.id) !== String(id));
-            salvarLocalmente();
-            renderizarClientes();
-            popularSelectClientes();
-            calcularMetricas();
-
-            try {
-                if (!auth.currentUser) await signInAnonymously(auth);
-                await deleteDoc(doc(db, "clientes", String(id)));
-            } catch (err) {
-                console.error("Erro no Firebase ao excluir cliente:", err);
-            }
+            await deleteDoc(doc(db, "clientes", String(id)));
         };
 
         window.salvarAgendamentoFirebase = async function(obj) {
             const docId = obj.id ? String(obj.id) : String(Date.now());
             obj.id = docId;
-
-            const idx = window.agendamentos.findIndex(a => String(a.id) === String(docId));
-            if (idx >= 0) window.agendamentos[idx] = obj;
-            else window.agendamentos.push(obj);
-            salvarLocalmente();
-            renderizarAgenda();
-            calcularMetricas();
-
-            try {
-                if (!auth.currentUser) await signInAnonymously(auth);
-                await setDoc(doc(db, "agendamentos", docId), obj);
-            } catch (err) {
-                console.error("Erro no Firebase ao agendar:", err);
-            }
+            await setDoc(doc(db, "agendamentos", docId), obj);
         };
 
         window.excluirAgendamentoFirebase = async function(id) {
-            window.agendamentos = window.agendamentos.filter(a => String(a.id) !== String(id));
-            salvarLocalmente();
-            renderizarAgenda();
-            calcularMetricas();
-
-            try {
-                if (!auth.currentUser) await signInAnonymously(auth);
-                await deleteDoc(doc(db, "agendamentos", String(id)));
-            } catch (err) {
-                console.error("Erro no Firebase ao excluir agendamento:", err);
-            }
+            await deleteDoc(doc(db, "agendamentos", String(id)));
         };
 
         window.salvarTatuadorFirebase = async function(obj) {
             const docId = obj.id ? String(obj.id) : String(Date.now());
             obj.id = docId;
-
-            const idx = window.tatuadores.findIndex(t => String(t.id) === String(docId));
-            if (idx >= 0) window.tatuadores[idx] = obj;
-            else window.tatuadores.push(obj);
-            salvarLocalmente();
-            renderizarTatuadores();
-
-            try {
-                if (!auth.currentUser) await signInAnonymously(auth);
-                await setDoc(doc(db, "tatuadores", docId), obj);
-            } catch (err) {
-                console.error("Erro no Firebase ao salvar tatuador:", err);
-            }
+            await setDoc(doc(db, "tatuadores", docId), obj);
         };
     </script>
 
@@ -808,6 +742,8 @@
             const selectAgenda = document.getElementById('agendaTatuador');
             const selectFiltroAgenda = document.getElementById('filtroAgendaTatuador');
 
+            if (!container) return;
+
             container.innerHTML = '';
             selectCli.innerHTML = '';
             selectAgenda.innerHTML = '';
@@ -910,6 +846,7 @@
             const busca = (document.getElementById('buscaCliente').value || '').toLowerCase();
             const tatuadorFiltro = document.getElementById('filtroTatuadorSelect').value;
             const container = document.getElementById('listaClientes');
+            if (!container) return;
             container.innerHTML = '';
 
             let lista = (window.clientes || []).filter(c => 
@@ -1064,6 +1001,7 @@
 
         function popularSelectClientes() {
             const select = document.getElementById('agendaClienteSelect');
+            if (!select) return;
             select.innerHTML = '';
             (window.clientes || []).forEach(c => {
                 select.innerHTML += `<option value="${c.id}">${c.nome} (${c.tatuador})</option>`;
@@ -1105,6 +1043,8 @@
             const containerHome = document.getElementById('listaHomeAgenda');
             const hojeStr = new Date().toISOString().split('T')[0];
             
+            if (!container || !containerHome) return;
+
             container.innerHTML = '';
             containerHome.innerHTML = '';
 
@@ -1173,7 +1113,8 @@
         }
 
         window.onload = function() {
-            document.getElementById('filtroMesRelatorio').value = new Date().toISOString().slice(0, 7);
+            const filtroMes = document.getElementById('filtroMesRelatorio');
+            if (filtroMes) filtroMes.value = new Date().toISOString().slice(0, 7);
         };
     </script>
 </body>
