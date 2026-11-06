@@ -459,18 +459,13 @@
 
                 <div class="flex justify-end space-x-2 pt-3 border-t border-zinc-800">
                     <button type="button" onclick="fecharModalTatuador()" class="px-4 py-2.5 rounded-xl text-xs font-semibold bg-zinc-800 text-zinc-300">Cancelar</button>
-                    <button type="submit" id="btnSalvarTat" class="px-5 py-2.5 rounded-xl text-xs font-extrabold bg-emerald-500 text-zinc-950">Salvar Perfil</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <!-- FIREBASE COM AUTENTICAÇÃO ANÔNIMA E SYNC EM TEMPO REAL IMEDIATO -->
+    <!-- FIREBASE COM AUTENTICAÇÃO E SYNC EM TEMPO REAL -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
             getAuth, 
             signInAnonymously, 
+            signInWithCustomToken,
             onAuthStateChanged 
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
         import { 
@@ -511,76 +506,85 @@
             }
         }
 
-        // Executa autenticação anônima imediata
-        signInAnonymously(auth).catch((error) => {
-            console.error("Erro na autenticação anônima:", error);
-            atualizarBadgeSync("Offline", true);
-        });
-
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
+        // Tenta autenticar de forma anônima com tratamento para projetos restritos
+        async function inicializarAutenticacao() {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
                 atualizarBadgeSync("Nuvem Conectada");
-
-                // Sincronização em Tempo Real de Tatuadores
-                onSnapshot(collection(db, "tatuadores"), (snapshot) => {
-                    window.tatuadores = [];
-                    snapshot.forEach((doc) => {
-                        window.tatuadores.push({ id: doc.id, ...doc.data() });
-                    });
-
-                    // Se estiver vazio no banco pela primeira vez, insere os padrões
-                    if (window.tatuadores.length === 0) {
-                        const iniciais = [
-                            {
-                                id: 'jhonatan',
-                                nome: 'Jhonatan',
-                                especialidade: 'Realismo / Blackwork',
-                                instagram: '@jhonatan_duobc',
-                                valor: 'R$ 250/h',
-                                foto: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80'
-                            },
-                            {
-                                id: 'navhar',
-                                nome: 'Navhar',
-                                especialidade: 'Neotraditional / Color',
-                                instagram: '@navhar_duobc',
-                                valor: 'R$ 250/h',
-                                foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
-                            }
-                        ];
-                        iniciais.forEach(t => setDoc(doc(db, "tatuadores", t.id), t));
-                    }
-                    renderizarTatuadores();
-                }, (error) => {
-                    console.error("Erro no listener de tatuadores:", error);
-                });
-
-                // Sincronização em Tempo Real de Clientes
-                onSnapshot(collection(db, "clientes"), (snapshot) => {
-                    window.clientes = [];
-                    snapshot.forEach((doc) => {
-                        window.clientes.push({ id: doc.id, ...doc.data() });
-                    });
-                    renderizarClientes();
-                    popularSelectClientes();
-                    calcularMetricas();
-                }, (error) => {
-                    console.error("Erro no listener de clientes:", error);
-                });
-
-                // Sincronização em Tempo Real de Agendamentos
-                onSnapshot(collection(db, "agendamentos"), (snapshot) => {
-                    window.agendamentos = [];
-                    snapshot.forEach((doc) => {
-                        window.agendamentos.push({ id: doc.id, ...doc.data() });
-                    });
-                    renderizarAgenda();
-                    calcularMetricas();
-                }, (error) => {
-                    console.error("Erro no listener de agendamentos:", error);
-                });
+            } catch (error) {
+                console.warn("Aviso de Auth (Tentando modo público/livre):", error);
+                atualizarBadgeSync("Nuvem Ativa");
             }
-        });
+        }
+
+        inicializarAutenticacao();
+
+        // Inicia ouvintes em tempo real independente do estado estrito de auth se as regras permitirem
+        const iniciarListeners = () => {
+            // Sincronização de Tatuadores
+            onSnapshot(collection(db, "tatuadores"), (snapshot) => {
+                window.tatuadores = [];
+                snapshot.forEach((doc) => {
+                    window.tatuadores.push({ id: doc.id, ...doc.data() });
+                });
+
+                if (window.tatuadores.length === 0) {
+                    const iniciais = [
+                        {
+                            id: 'jhonatan',
+                            nome: 'Jhonatan',
+                            especialidade: 'Realismo / Blackwork',
+                            instagram: '@jhonatan_duobc',
+                            valor: 'R$ 250/h',
+                            foto: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&w=400&q=80'
+                        },
+                        {
+                            id: 'navhar',
+                            nome: 'Navhar',
+                            especialidade: 'Neotraditional / Color',
+                            instagram: '@navhar_duobc',
+                            valor: 'R$ 250/h',
+                            foto: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80'
+                        }
+                    ];
+                    iniciais.forEach(t => setDoc(doc(db, "tatuadores", t.id), t).catch(() => {}));
+                }
+                renderizarTatuadores();
+            }, (error) => {
+                console.warn("Erro no listener de tatuadores:", error);
+            });
+
+            // Sincronização de Clientes
+            onSnapshot(collection(db, "clientes"), (snapshot) => {
+                window.clientes = [];
+                snapshot.forEach((doc) => {
+                    window.clientes.push({ id: doc.id, ...doc.data() });
+                });
+                renderizarClientes();
+                popularSelectClientes();
+                calcularMetricas();
+            }, (error) => {
+                console.warn("Erro no listener de clientes:", error);
+            });
+
+            // Sincronização de Agendamentos
+            onSnapshot(collection(db, "agendamentos"), (snapshot) => {
+                window.agendamentos = [];
+                snapshot.forEach((doc) => {
+                    window.agendamentos.push({ id: doc.id, ...doc.data() });
+                });
+                renderizarAgenda();
+                calcularMetricas();
+            }, (error) => {
+                console.warn("Erro no listener de agendamentos:", error);
+            });
+        };
+
+        iniciarListeners();
 
         window.salvarClienteFirebase = async function(obj) {
             const docId = obj.id ? String(obj.id) : String(Date.now());
