@@ -465,7 +465,7 @@
         </div>
     </div>
 
-    <!-- FIREBASE COM AUTENTICAÇÃO E SYNC EM TEMPO REAL -->
+    <!-- FIREBASE COM AUTENTICAÇÃO E SYNC EM TEMPO REAL (CONFIGURAÇÃO DUO-BC) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
         import { 
@@ -483,12 +483,12 @@
         } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
 
         const firebaseConfig = {
-            apiKey: "AIzaSyDXMxC6ql9jjbFlTb76vF__47ZPGjfcNYQ",
-            authDomain: "studioduobc.firebaseapp.com",
-            projectId: "studioduobc",
-            storageBucket: "studioduobc.firebasestorage.app",
-            messagingSenderId: "518113500152",
-            appId: "1:518113500152:web:8c0847f8800092833a940d"
+            apiKey: "AIzaSyC8jyBEBpok_juMRP_fSiNiomYLU6uUQYY",
+            authDomain: "duo-bc.firebaseapp.com",
+            projectId: "duo-bc",
+            storageBucket: "duo-bc.appspot.com",
+            messagingSenderId: "819380369302",
+            appId: "1:819380369302:web:2e799b59013dea29f40fb7"
         };
 
         const app = initializeApp(firebaseConfig);
@@ -511,7 +511,6 @@
             }
         }
 
-        // Conexão e login anônimo robusto
         async function inicializarAutenticacao() {
             try {
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
@@ -528,9 +527,7 @@
 
         inicializarAutenticacao();
 
-        // Inicia ouvintes em tempo real para sincronização entre todos os dispositivos
         const iniciarListeners = () => {
-            // Sincronização de Tatuadores
             onSnapshot(collection(db, "tatuadores"), (snapshot) => {
                 window.tatuadores = [];
                 snapshot.forEach((doc) => {
@@ -564,7 +561,6 @@
                 atualizarBadgeSync("Erro Conexão", true);
             });
 
-            // Sincronização de Clientes
             onSnapshot(collection(db, "clientes"), (snapshot) => {
                 window.clientes = [];
                 snapshot.forEach((doc) => {
@@ -577,7 +573,6 @@
                 console.warn("Erro no listener de clientes:", error);
             });
 
-            // Sincronização de Agendamentos
             onSnapshot(collection(db, "agendamentos"), (snapshot) => {
                 window.agendamentos = [];
                 snapshot.forEach((doc) => {
@@ -598,12 +593,7 @@
             try {
                 await setDoc(doc(db, "clientes", docId), obj);
             } catch (err) {
-                console.warn("Erro ao salvar cliente na nuvem (gravando localmente):", err);
-                // Salva em localStorage de emergência caso haja bloqueio de permissão
-                const salvosLocais = JSON.parse(localStorage.getItem('studio_clientes_local') || '[]');
-                const idx = salvosLocais.findIndex(item => String(item.id) === String(docId));
-                if (idx >= 0) salvosLocais[idx] = obj; else salvosLocais.push(obj);
-                localStorage.setItem('studio_clientes_local', JSON.stringify(salvosLocais));
+                console.warn("Erro ao salvar cliente na nuvem:", err);
             }
         };
 
